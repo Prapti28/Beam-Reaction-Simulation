@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balance Game</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background-color: #578323;
+    }
+    .balance-beam {
+      width: 750px;
+      height: 120px;
+      background-image: url('plank2.png');
+      position: relative;
+      margin-top: 100px;
+      transition: transform 0.5s ease; 
+      margin-bottom: 0px;
+    }
+
+    .spring1{
+      height: 227px;
+      width: 90px;
+      background-image: url('spring4.png');
+      margin-left:10px ;
+      margin-top: -10px;
+    }
+
+    .spring2{
+      height: 227px;
+      width: 90px;
+      background-image: url('spring4.png');
+      margin-left: 250px;
+      margin-top: -10px;
+    }
+
+    .weight {
+      cursor: grab;
+      width: 140px;
+      height: 140px;
+      background-image: url('weightH.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      position: absolute;
+      z-index: -1;
+      
+      
+    }
+    .weight:active {
+        cursor: grabbing;
+        background-image: url('weight.png');
+        
+    }
+
+    .inbox{
+      position: absolute;
+      margin-top: 45px;
+      margin-right: 80%;
+      color: #241606;
+      border-radius: 10px;
+      border-color: black;
+      background-color: #82b74b  ;
+      font-size: 20px;
+      font-family: Arial, sans-serif;
+      padding-top: -15px;
+      padding-left: 30px;
+      padding-right: 30px;
+      padding-bottom: 30px;
+      max-width: 300px;
+    }
+
+    .label{
+      position: absolute;
+      top: 75%;
+      width: 80px;
+      text-align: center;
+      font-size: 14px;
+      color: white;
+
+    }
+    
+    .reaction {
+      height: 50px;
+      width: 50px;
+      border-radius: 100%;
+      background-color: #c1946a;
+      margin-top: 20px;
+      margin-bottom: 0%;
+      font-weight: bold;
+      color: black;
+      text-align: justify;
+      padding: 50px;
+      margin-right: 280px;
+      margin-left: -15px;
+      margin-top: -100px; 
+    }
+
+    .reaction2 {
+      height: 50px;
+      width: 50px;
+      border-radius: 100%;
+      background-color: #c1946a;
+      margin-top: 20px;
+      font-weight: bold;
+      color: black;
+      text-align: justify;
+      padding: 50px;
+      margin-top: -100px;
+      margin-left: 220px;
+      
+    }
+
+    input[type="number"] {
+      padding: 10px;
+      margin: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      margin-top: 30px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Balance Beam Game</h1>
+  <div class="inbox" id="infoBox">
+    <h3>Weights Information</h3>
+    <div id="weightsInfo">No weights added yet.</div>
+    </div>
+   <div class="balance-beam" id="balance-beam"></div>
+    <table>
+      <tr>
+        <td><div class="spring1" id="balanceSpring1"></div></td>
+        <td><div class="spring2" id="balanceSpring2"></div></td>
+    </tr>
+  <tr>
+    <td><div class="reaction" id="balanceStatus">Reaction1: 0</div></td>
+    <td><div class="reaction2" id="balanceStatus2">Reaction2: 0</div></td>  
+</tr>
+</table>
+<div>
+  <input type="number" id="userWeight" placeholder="Enter weight (kg)" min="1" max="100">
+  <button onclick="addNewWeight()">Add Weight</button>
+</div>
+
+
+  <script>
+    const balanceBeam = document.getElementById('balance-beam')
+    const beamLength = 800; // Length of the beam in pixels
+    const pixelsPerCm = 4;
+    
+    let weights = []; // Array to store weights with positions
+
+const supportA = { position: 200, reaction: 0 };
+const supportB = { position: 600, reaction: 0 };
+
+// Add a new weight to the beam
+function addNewWeight() {
+  const userWeightInput = document.getElementById('userWeight');
+  const UWeight = parseFloat(userWeightInput.value)*10/9.81;
+  const userWeight = UWeight;
+
+  if(isNaN(userWeight) || userWeight<=0){
+    alert('Please enter a valid weight value.');
+    return;
+  }
+  const weight = document.createElement('div');
+  weight.classList.add('weight');
+  weight.style.left = `${beamLength / 2}px`; // Start at the center of the beam
+  weight.style.top = `${balanceBeam.offsetHeight -48}px`;
+
+  const label = document.createElement('div');
+  label.classList.add('label');
+  weight.appendChild(label);
+
+  balanceBeam.appendChild(weight);
+
+  const weightData = { element: weight, position: beamLength / 2, weight: userWeight, label }; 
+  weights.push(weightData);
+
+  updateLabel(weight, beamLength / 2, userWeight);
+  updateWeightsInfo();
+  makeDraggable(weight, weightData);
+  updateBalance();
+
+  userWeightInput.value = '';
+}
+
+function updateLabel(weightElement, position, weight){
+  const label = weightElement.querySelector('.label');
+  const distanceInCm = Math.round(position / pixelsPerCm);
+  label.innerText = `${weight.toFixed(1)} kg @ ${distanceInCm} cm`;
+}
+
+function updateWeightsInfo(){
+  const infoBox = document.getElementById('weightsInfo');
+  if(weights.length === 0){
+    infoBox.innerHTML = 'No weights added yet.';
+  }else{
+    let weightsText = '';
+    weights.forEach(({weight, position}) => {
+      const distanceInCm = Math.round(position / pixelsPerCm);
+      weightsText += `${weight.toFixed(1)} kg @ ${distanceInCm} cm<br>`;
+    });
+    infoBox.innerHTML = weightsText;
+  }
+  
+}
+
+
+
+// Make the weight draggable
+function makeDraggable(weightElement, weightData) {
+  let isDragging = false;
+  let offsetX = 0;
+
+  weightElement.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    offsetX = e.clientX - weightElement.getBoundingClientRect().left;
+    weightElement.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    // Calculate new position within beam boundaries
+    const beamRect = balanceBeam.getBoundingClientRect();
+    let newLeft = e.clientX - beamRect.left - offsetX;
+
+    // Clamp the weight's position to the beam's length
+    newLeft = Math.max(0, Math.min(newLeft, beamLength - weightElement.offsetWidth));
+
+    weightElement.style.left = `${newLeft}px`;
+    weightData.position = newLeft; // Update the weight's position data
+    updateLabel(weightElement, newLeft, weightData.weight);
+    updateWeightsInfo(weightElement, newLeft, weightData.weight);
+    updateBalance();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      weightElement.style.cursor = 'grab';
+    }
+  });
+}
+
+// Update the balance of the beam
+function updateBalance() {
+  const gravity = 9.81;
+  let momentA = 0;
+  let momentB = 0;
+
+  weights.forEach(({ weight, position }) => {
+    momentA += weight * (position - supportA.position);
+    momentB += weight * (supportB.position - position);
+  });
+
+  supportA.reaction = Math.max(0, momentB / (supportB.position - supportA.position));
+  supportB.reaction = Math.max(0, momentA / (supportB.position - supportA.position));
+
+  // Converting N to Kg
+  const supportAKg = supportA.reaction * 10 / gravity;
+  const supportBKg = supportB.reaction * 10/ gravity;
+
+    const spring1=document.getElementById('balanceSpring1');
+    
+    const spring2 = document.getElementById('balanceSpring2');
+    
+    const react1 = document.getElementById('balanceStatus').innerText =`Support R1: ${supportAKg.toFixed(2)} Kg`; 
+   const react2 = document.getElementById('balanceStatus2').innerText=`Support R2: ${supportBKg.toFixed(2)} Kg`;
+    
+    console.log("Hello");
+
+  // Visualize tilt or equilibrium
+  const netMoment = momentA - momentB;
+  const rotationAngle = Math.min(Math.abs(netMoment * 0.01), 0.2); // Simplified rotation calculation
+
+  if (netMoment < 0) {
+    balanceBeam.style.transform = `rotate(${-rotationAngle}deg)`;
+  } else if (netMoment > 0) {
+    balanceBeam.style.transform = `rotate(${rotationAngle}deg)`;
+  } else {
+    balanceBeam.style.transform = `rotate(0deg)`;
+  }
+}
+
+</script>
+</body>
+</html>
